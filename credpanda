@@ -1,0 +1,47 @@
+#!/bin/bash
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+echo "CredPanda"
+echo "coyote0x90 @ HackTheBox"
+echo "Executing from $SCRIPT_DIR"
+
+[ -f "credpanda.tried.dat" ] || touch "credpanda.tried.dat"
+[ -f "services.dat" ] || touch "services.dat"
+
+function run_script {
+  runtype=$1
+  file=$2
+  if [ -f "$file" ]; then
+    $SCRIPT_DIR/scripts/hydra-bruteforce-with-database.awk -v type=$runtype $file
+  else # add user or password individually
+    echo "$file" | $SCRIPT_DIR/scripts/hydra-bruteforce-with-database.awk -v type=$runtype
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -u|--users)
+      echo "Adding users"
+      shift # pop arg
+      run_script user $1
+      ;;
+    -p|--passwords)
+      echo "Adding passwords"
+      shift # pop arg
+      run_script password $1
+      ;;
+    -v|--verbose) # todo
+      VERBOSE=1
+      ;;
+    -h|--help)
+      echo "Usage: $0 [ options ]"
+      echo "Options:"
+      cat "$0" | grep '^\s\+-.|--.*'
+      exit 1
+      ;;
+    *)
+      KB_DIR="$1"
+      ;;
+  esac
+  shift
+done
+
