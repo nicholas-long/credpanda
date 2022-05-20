@@ -7,27 +7,17 @@ echo "Executing from $SCRIPT_DIR"
 [ -f "credpanda.tried.dat" ] || touch "credpanda.tried.dat"
 [ -f "services.dat" ] || touch "services.dat"
 
-function run_script {
-  runtype=$1
-  file=$2
-  if [ -f "$file" ]; then
-    $SCRIPT_DIR/scripts/hydra-bruteforce-with-database.awk -v type=$runtype $file
-  else # add user or password individually
-    echo "$file" | $SCRIPT_DIR/scripts/hydra-bruteforce-with-database.awk -v type=$runtype
-  fi
-}
-
 while [[ $# -gt 0 ]]; do
   case $1 in
     -u|--users)
       echo "Adding users"
       shift # pop arg
-      run_script user $1
+      userfile=$1
       ;;
     -p|--passwords)
       echo "Adding passwords"
       shift # pop arg
-      run_script password $1
+      passwordfile=$1
       ;;
     -v|--verbose) # todo
       VERBOSE=1
@@ -45,3 +35,33 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+script="$SCRIPT_DIR/scripts/hydra-bruteforce-with-database.awk"
+args=""
+if [ ! -z "$userfile" ] && \
+  [ ! -z "$passwordfile" ] && \
+  [ -f "$userfile" ] && \
+  [ -f "$passwordfile" ]; then
+  echo doing both users and passwords
+  $script type=user "$userfile" type=password "$passwordfile"
+else
+  echo not doing both
+  if [ ! -z "$userfile" ]; then
+    if [ -f "$userfile" ]; then
+      $script type=user "$userfile"
+    else
+      echo "$userfile" | $script -v type=user
+    fi
+  fi
+  if [ ! -z "$passwordfile" ]; then
+    if [ -f "$passwordfile" ]; then
+      $script type=password "$passwordfile"
+    else
+      echo "$passwordfile" | $script -v type=password
+    fi
+  fi
+  if [ ! -z "$args" ]; then
+    $script $args
+  else
+    echo "nothing to do."
+  fi
+fi
